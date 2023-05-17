@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 
 def reduce_mem_usage(df):
@@ -38,3 +39,21 @@ def reduce_mem_usage(df):
     print('Decreased by {:.1f}%'.format(100 * (start_mem - end_mem) / start_mem))
 
     return df
+
+
+def cpu():
+    return torch.device('cpu')
+
+
+def gpu(i=0):
+    return torch.device(f'cuda:{i}')
+
+
+def num_gpus():
+    return torch.cuda.device_count()
+
+
+def try_gpu(i=0):
+    if num_gpus() >= i + 1:
+        return gpu(i)
+    return cpu()

@@ -11,8 +11,8 @@ def make_submission(X_raw, y):
     X_test_raw = pd.read_csv(os.path.join(IN_PATH, 'test_values.csv'), index_col='building_id')
 
     ppc = Preprocessor()
-    X = ppc.process(X_raw, is_train=True)
-    X_test = ppc.process(X_test_raw, is_train=False)
+    X = ppc.process(is_train=True, X=X_raw, y=y)
+    X_test = ppc.process(is_train=False, X=X_test_raw, y=None)
 
     model = LogisticRegression(random_state=0)
     model.fit(X, y)
