@@ -49,16 +49,17 @@ class Preprocessor:
             X_poly = self.poly.transform(X)
         return X_poly
 
-    def process(self, is_train, X, y=None):
+    def process(self, is_train, is_tree, X, y=None):
         self.is_train = is_train
         X_processed = reduce_mem_usage(X)
 
         X_processed = self._enc_cat(X_processed, y)
         print('_enc_cat done')
 
-        X_processed = self._add_interactions(X_processed)
-        print('_add_interactions done')
+        if not is_tree:
+            X_processed = self._add_interactions(X_processed)
+            print('_add_interactions done')
 
-        X_processed = self._standardize(X_processed)
+            X_processed = self._standardize(X_processed)
 
         return X_processed
