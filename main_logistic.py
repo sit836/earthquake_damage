@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import f1_score, confusion_matrix, accuracy_score
+from sklearn.metrics import f1_score
 from sklearn.model_selection import train_test_split
 
 from constants import IN_PATH, OUT_PATH
@@ -49,10 +49,6 @@ if local_test:
 
     f1_train = f1_score(y_train, pred_train, average='micro')
     f1_eval = f1_score(y_eval, pred_eval, average='micro')
-    print(f'f1_train, f1_eval: {(round(f1_train, 2), round(f1_eval, 2))}')
-    print(f'confusion_matrix train:\n{confusion_matrix(y_train, pred_train)}')
-    print(f'confusion_matrix eval:\n{confusion_matrix(y_eval, pred_eval)}')
-    print(f'accuracy_score train: {round(accuracy_score(y_train, pred_train), 2)}')
-    print(f'accuracy_score eval: {round(accuracy_score(y_eval, pred_eval), 2)}')
-
-make_submission(X_raw, y, is_tree)
+    print(f'f1_train, f1_eval: {(round(f1_train, 4), round(f1_eval, 4))}')
+else:
+    make_submission(X_raw, y, is_tree)

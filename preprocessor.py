@@ -48,16 +48,16 @@ class Preprocessor:
                                     + list(self.ohe.get_feature_names_out(OHE_COLS))
                                     + TE_COLS
                                     + JS_COLS
-                                    + QE_COLS
-                                    + COUNT_COLS
+                                    + [f'{col}_iqr' for col in QE_COLS]
+                                    + [f'{col}_count' for col in COUNT_COLS]
                             )
 
     def _add_interactions(self, X):
         if self.is_train:
-            X_poly = self.poly.fit_transform(X)
+            X_poly = self.poly.fit_transform(X[NUM_COLS + BINARY_COLS + GEO_LVLS])
         else:
-            X_poly = self.poly.transform(X)
-        return X_poly
+            X_poly = self.poly.transform(X[NUM_COLS + BINARY_COLS + GEO_LVLS])
+        return np.hstack((X, X_poly))
 
     def _add_group_stat(self, X):
         cat_cols = MULTIARY_COLS
