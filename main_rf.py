@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 
 from constants import IN_PATH, OUT_PATH
 from preprocessor import Preprocessor
+from utils import plot_fe_importance
 
 
 def make_submission(X_raw, y, is_tree, max_depth):
@@ -63,5 +64,7 @@ if local_test:
     f1_train = f1_score(y_train, pred_train, average='micro')
     f1_eval = f1_score(y_eval, pred_eval, average='micro')
     print(f'f1_train, f1_eval: {(round(f1_train, 4), round(f1_eval, 4))}')
+
+    plot_fe_importance(model, X_train.columns, num_top_fe=30)
 else:
     make_submission(X_raw, y, is_tree, max_depth=32)

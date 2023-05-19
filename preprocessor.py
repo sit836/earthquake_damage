@@ -46,17 +46,23 @@ class Preprocessor:
         return pd.DataFrame(np.hstack((X_no_change, X_ohe, X_te, X_js, X_iqr, X_ce)),
                             columns=NUM_COLS + BINARY_COLS + [col for col in X.columns if 'by' in col]
                                     + list(self.ohe.get_feature_names_out(OHE_COLS))
-                                    + TE_COLS
-                                    + JS_COLS
+                                    + [f'{col}_te' for col in TE_COLS]
+                                    + [f'{col}_js' for col in JS_COLS]
                                     + [f'{col}_iqr' for col in QE_COLS]
                                     + [f'{col}_count' for col in COUNT_COLS]
                             )
 
     def _add_interactions(self, X):
         if self.is_train:
-            X_poly = self.poly.fit_transform(X[NUM_COLS + BINARY_COLS + GEO_LVLS])
+            X_poly = self.poly.fit_transform(X[NUM_COLS
+                                               + BINARY_COLS
+                                               + [f'{col}_te' for col in TE_COLS]
+                                               + [f'{col}_js' for col in JS_COLS]])
         else:
-            X_poly = self.poly.transform(X[NUM_COLS + BINARY_COLS + GEO_LVLS])
+            X_poly = self.poly.transform(X[NUM_COLS
+                                           + BINARY_COLS
+                                           + [f'{col}_te' for col in TE_COLS]
+                                           + [f'{col}_js' for col in JS_COLS]])
         return np.hstack((X, X_poly))
 
     def _add_group_stat(self, X):

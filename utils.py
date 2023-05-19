@@ -1,6 +1,8 @@
+import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 import torch
-
+import pandas as pd
 
 def reduce_mem_usage(df):
     """ iterate through all the columns of a dataframe and modify the data type
@@ -39,6 +41,18 @@ def reduce_mem_usage(df):
     print('Decreased by {:.1f}%'.format(100 * (start_mem - end_mem) / start_mem))
 
     return df
+
+
+def plot_fe_importance(model, feature_names, num_top_fe):
+    importances = model.feature_importances_
+    forest_importances = pd.Series(importances, index=feature_names)
+    forest_importances.sort_values(ascending=False, inplace=True)
+    forest_importances = forest_importances[:num_top_fe]
+
+    fig, ax = plt.subplots()
+    sns.barplot(x=forest_importances.values, y=forest_importances.index)
+    fig.tight_layout()
+    plt.show()
 
 
 def cpu():
