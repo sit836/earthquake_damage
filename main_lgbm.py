@@ -1,9 +1,9 @@
 import os
 
-import pandas as pd
-from sklearn.metrics import f1_score, confusion_matrix, accuracy_score
-from sklearn.model_selection import train_test_split, GridSearchCV
 import lightgbm as lgb
+import pandas as pd
+from sklearn.metrics import f1_score
+from sklearn.model_selection import train_test_split, GridSearchCV
 
 from constants import IN_PATH, OUT_PATH
 from preprocessor import Preprocessor
@@ -34,7 +34,7 @@ def search_opt_model(X, y, model, param_grid):
     return regressor.best_estimator_
 
 
-local_test = False
+local_test = True
 
 X_raw = pd.read_csv(os.path.join(IN_PATH, 'train_values.csv'), index_col='building_id')
 train_labels = pd.read_csv(os.path.join(IN_PATH, 'train_labels.csv'), index_col='building_id')
@@ -50,7 +50,7 @@ if local_test:
     print(f'X_train.shape: {X_train.shape}')
 
     param_grid = {"num_leaves": [512],
-                  "n_estimators": [300, 500,]}
+                  "n_estimators": [100, 300, 500]}
 
     model = lgb.LGBMClassifier(random_state=0, learning_rate=0.01, num_leaves=256, n_estimators=1000, n_jobs=-1)
     # opt_gbm = search_opt_model(X_train, y_train, model,
@@ -64,5 +64,5 @@ if local_test:
     f1_train = f1_score(y_train, pred_train, average='micro')
     f1_eval = f1_score(y_eval, pred_eval, average='micro')
     print(f'f1_train, f1_eval: {(round(f1_train, 4), round(f1_eval, 4))}')
-
-make_submission(X_raw, y, is_tree, num_leaves=256, n_estimators=1000)
+else:
+    make_submission(X_raw, y, is_tree, num_leaves=256, n_estimators=1000)
