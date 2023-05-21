@@ -10,14 +10,14 @@ from preprocessor import Preprocessor
 from utils import plot_fe_importance
 
 
-def make_submission(X_raw, y, is_tree, max_depth):
+def make_submission(X_raw, y, method, max_depth):
     X_test_raw = pd.read_csv(os.path.join(IN_PATH, 'test_values.csv'), index_col='building_id')
 
     ppc = Preprocessor()
-    X = ppc.process(is_train=True, is_tree=is_tree, X=X_raw, y=y)
-    X_test = ppc.process(is_train=False, is_tree=is_tree, X=X_test_raw, y=None)
+    X = ppc.process(is_train=True, method=method, X=X_raw, y=y)
+    X_test = ppc.process(is_train=False, method=method, X=X_test_raw, y=None)
 
-    model = RandomForestClassifier(random_state=0, max_depth=max_depth)
+    model = RandomForestClassifier(random_state=0, max_depth=max_depth, n_jobs=-1)
     model.fit(X, y)
     pred_test = model.predict(X_test)
 
@@ -35,22 +35,22 @@ def search_opt_model(X, y, model, param_grid):
     return regressor.best_estimator_
 
 
-local_test = True
+local_test = False
 
 X_raw = pd.read_csv(os.path.join(IN_PATH, 'train_values.csv'), index_col='building_id')
 train_labels = pd.read_csv(os.path.join(IN_PATH, 'train_labels.csv'), index_col='building_id')
 y = train_labels.values.ravel()
-is_tree = True
+method = "random_forest"
 
 if local_test:
     X_train_raw, X_eval_raw, y_train, y_eval = train_test_split(X_raw, y, test_size=0.25, stratify=y, random_state=123)
 
     ppc = Preprocessor()
-    X_train = ppc.process(is_train=True, is_tree=is_tree, X=X_train_raw, y=y_train)
-    X_eval = ppc.process(is_train=False, is_tree=is_tree, X=X_eval_raw, y=None)
+    X_train = ppc.process(is_train=True, method=method, X=X_train_raw, y=y_train)
+    X_eval = ppc.process(is_train=False, method=method, X=X_eval_raw, y=None)
     print(f'X_train.shape: {X_train.shape}')
 
-    param_grid = {"max_depth": [32, 64],
+    param_grid = {"max_depth": [16, 32, 64, 128],
                   }
     model = RandomForestClassifier(random_state=0, max_depth=32, n_jobs=-1)
     # opt_gbm = search_opt_model(X_train, y_train, model,
@@ -67,4 +67,4 @@ if local_test:
 
     plot_fe_importance(model, X_train.columns, num_top_fe=30)
 else:
-    make_submission(X_raw, y, is_tree, max_depth=32)
+    make_submission(X_raw, y, method, max_depth=32)

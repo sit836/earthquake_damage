@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 from sklearn import preprocessing
 
-from constants import BINARY_COLS, MULTIARY_COLS, NUM_COLS, GEO_LVLS, OHE_COLS, TE_COLS, JS_COLS, QE_COLS, COUNT_COLS
+from constants import BINARY_COLS, MULTIARY_COLS, NUM_COLS, OHE_COLS, TE_COLS, JS_COLS, QE_COLS, COUNT_COLS, \
+    CATBOOST_COLS
 from utils import reduce_mem_usage
 
 
@@ -13,9 +14,10 @@ class Preprocessor:
         self.ohe = preprocessing.OneHotEncoder(handle_unknown='ignore')
         self.te = ce.TargetEncoder(cols=TE_COLS)
         self.js = ce.JamesSteinEncoder(cols=JS_COLS)
-        self.qe_25 = ce.QuantileEncoder(cols=GEO_LVLS, quantile=0.25)
-        self.qe_75 = ce.QuantileEncoder(cols=GEO_LVLS, quantile=0.75)
-        self.ce = ce.CountEncoder(cols=GEO_LVLS)
+        self.qe_25 = ce.QuantileEncoder(cols=QE_COLS, quantile=0.25)
+        self.qe_75 = ce.QuantileEncoder(cols=QE_COLS, quantile=0.75)
+        self.ce = ce.CountEncoder(cols=COUNT_COLS)
+        self.cbe = ce.CatBoostEncoder(cols=CATBOOST_COLS)
         self.poly = preprocessing.PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
         self.is_train = None
 
@@ -32,24 +34,27 @@ class Preprocessor:
             X_ohe = self.ohe.fit_transform(X[OHE_COLS]).toarray()
             X_te = self.te.fit_transform(X[TE_COLS], y)
             X_js = self.js.fit_transform(X[JS_COLS], y)
-            X_qe_25 = self.qe_25.fit_transform(X[GEO_LVLS], y)
-            X_qe_75 = self.qe_75.fit_transform(X[GEO_LVLS], y)
-            X_ce = self.ce.fit_transform(X[GEO_LVLS], y)
+            X_qe_25 = self.qe_25.fit_transform(X[QE_COLS], y)
+            X_qe_75 = self.qe_75.fit_transform(X[QE_COLS], y)
+            X_ce = self.ce.fit_transform(X[COUNT_COLS], y)
+            X_cbe = self.cbe.fit_transform(X[CATBOOST_COLS], y)
         else:
             X_ohe = self.ohe.transform(X[OHE_COLS]).toarray()
             X_te = self.te.transform(X[TE_COLS])
             X_js = self.js.transform(X[JS_COLS])
-            X_qe_25 = self.qe_25.transform(X[GEO_LVLS])
-            X_qe_75 = self.qe_75.transform(X[GEO_LVLS])
-            X_ce = self.ce.transform(X[GEO_LVLS], y)
+            X_qe_25 = self.qe_25.transform(X[QE_COLS])
+            X_qe_75 = self.qe_75.transform(X[QE_COLS])
+            X_ce = self.ce.transform(X[COUNT_COLS])
+            X_cbe = self.cbe.transform(X[CATBOOST_COLS])
         X_iqr = X_qe_75 - X_qe_25
-        return pd.DataFrame(np.hstack((X_no_change, X_ohe, X_te, X_js, X_iqr, X_ce)),
+        return pd.DataFrame(np.hstack((X_no_change, X_ohe, X_te, X_js, X_iqr, X_ce, X_cbe)),
                             columns=NUM_COLS + BINARY_COLS + [col for col in X.columns if 'by' in col]
                                     + list(self.ohe.get_feature_names_out(OHE_COLS))
                                     + [f'{col}_te' for col in TE_COLS]
                                     + [f'{col}_js' for col in JS_COLS]
                                     + [f'{col}_iqr' for col in QE_COLS]
                                     + [f'{col}_count' for col in COUNT_COLS]
+                                    + [f'{col}_cb' for col in CATBOOST_COLS]
                             )
 
     def _add_interactions(self, X):
@@ -81,17 +86,18 @@ class Preprocessor:
         X['volume'] = X['area_percentage'] * X['height_percentage']
         return X
 
-    def process(self, is_train, is_tree, X, y=None):
+    def process(self, is_train, method, X, y=None):
         self.is_train = is_train
         X_processed = reduce_mem_usage(X)
 
         # X_processed = self._add_group_stat(X_processed)
         # X_processed = self._create_features(X_processed)
 
-        X_processed = self._enc_cat(X_processed, y)
-        print('_enc_cat done')
+        if method != 'catboost':
+            X_processed = self._enc_cat(X_processed, y)
+            print('_enc_cat done')
 
-        if not is_tree:
+        if method not in ['catboost', 'random_forest', 'lightgbm']:
             X_processed = self._add_interactions(X_processed)
             print('_add_interactions done')
 

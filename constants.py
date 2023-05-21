@@ -24,3 +24,4 @@ TE_COLS = ['geo_level_1_id']
 JS_COLS = ['geo_level_2_id', 'geo_level_3_id']
 QE_COLS = GEO_LVLS
 COUNT_COLS = GEO_LVLS
+CATBOOST_COLS = GEO_LVLS

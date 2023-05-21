@@ -1,8 +1,16 @@
+import lightgbm as lgb
 import matplotlib.pyplot as plt
 import numpy as np
+import optuna
+import pandas as pd
 import seaborn as sns
 import torch
-import pandas as pd
+from catboost import CatBoostClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import f1_score
+
+from constants import BINARY_COLS, MULTIARY_COLS, GEO_LVLS
+
 
 def reduce_mem_usage(df):
     """ iterate through all the columns of a dataframe and modify the data type
@@ -53,6 +61,106 @@ def plot_fe_importance(model, feature_names, num_top_fe):
     sns.barplot(x=forest_importances.values, y=forest_importances.index)
     fig.tight_layout()
     plt.show()
+
+
+def tune_lgbm(X_train, y_train, X_eval, y_eval, n_trials=20):
+    def objective(trial):
+        param = {
+            "objective": "gini",
+            "metric": "multi_logloss",
+            "num_class": 3,
+            "verbosity": -1,
+            "boosting_type": "gbdt",
+            "lambda_l1": trial.suggest_float("lambda_l1", 1e-8, 10.0, log=True),
+            "lambda_l2": trial.suggest_float("lambda_l2", 1e-8, 10.0, log=True),
+            "num_leaves": trial.suggest_int("num_leaves", 32, 1024),
+            "n_estimators": trial.suggest_int("n_estimators", 50, 2000),
+            "feature_fraction": trial.suggest_float("feature_fraction", 0.6, 1.0),
+            "bagging_fraction": trial.suggest_float("bagging_fraction", 0.4, 1.0),
+            "bagging_freq": trial.suggest_int("bagging_freq", 1, 7),
+            "min_data_in_leaf": trial.suggest_int("min_child_samples", 20, 10000),
+        }
+
+        model = lgb.LGBMClassifier(**param, random_state=0, n_jobs=-1)
+        model.fit(X_train, y_train)
+        pred_eval = model.predict(X_eval)
+        return f1_score(y_eval, pred_eval, average='micro')
+
+    study = optuna.create_study(direction="maximize")
+    study.optimize(objective, n_trials=n_trials)
+
+    print("Number of finished trials: {}".format(len(study.trials)))
+
+    print("Best trial:")
+    trial = study.best_trial
+
+    print("  Value: {}".format(trial.value))
+
+    print("  Params: ")
+    for key, value in trial.params.items():
+        print("    {}: {}".format(key, value))
+
+    print(f'trial.params: {trial.params}')
+
+
+def tune_rf(X_train, y_train, X_eval, y_eval, n_trials=20):
+    def objective(trial):
+        param = {
+            "max_depth": trial.suggest_int("max_depth", 2, 256),
+            "max_features": trial.suggest_float("max_features", 0.001, 0.5),
+        }
+
+        model = RandomForestClassifier(**param, random_state=0, n_jobs=-1)
+        model.fit(X_train, y_train)
+        pred_eval = model.predict(X_eval)
+        return f1_score(y_eval, pred_eval, average='micro')
+
+    study = optuna.create_study(direction="maximize")
+    study.optimize(objective, n_trials=n_trials)
+
+    print("Number of finished trials: {}".format(len(study.trials)))
+
+    print("Best trial:")
+    trial = study.best_trial
+
+    print("  Value: {}".format(trial.value))
+
+    print("  Params: ")
+    for key, value in trial.params.items():
+        print("    {}: {}".format(key, value))
+
+    print(f'trial.params: {trial.params}')
+
+
+def tune_catboost(X_train, y_train, X_eval, y_eval, n_trials=20):
+    def objective(trial):
+        param = {
+            "learning_rate": trial.suggest_float("learning_rate", 0.001, 0.01),
+            "depth": trial.suggest_int("depth", 4, 10),
+            "l2_leaf_reg": trial.suggest_int("l2_leaf_reg", 2, 10),
+            "random_strength": trial.suggest_float("random_strength", 0., 10.),
+        }
+
+        model = CatBoostClassifier(**param, cat_features=BINARY_COLS + MULTIARY_COLS + GEO_LVLS, random_state=0)
+        model.fit(X_train, y_train)
+        pred_eval = model.predict(X_eval)
+        return f1_score(y_eval, pred_eval, average='micro')
+
+    study = optuna.create_study(direction="maximize")
+    study.optimize(objective, n_trials=n_trials)
+
+    print("Number of finished trials: {}".format(len(study.trials)))
+
+    print("Best trial:")
+    trial = study.best_trial
+
+    print("  Value: {}".format(trial.value))
+
+    print("  Params: ")
+    for key, value in trial.params.items():
+        print("    {}: {}".format(key, value))
+
+    print(f'trial.params: {trial.params}')
 
 
 def cpu():
